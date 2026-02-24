@@ -1,576 +1,1220 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-       
-    <meta charset="UTF-8">
-       
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Security Agent Dashboard</title>
-       
-    <script src="https://cdn.tailwindcss.com"></script>
-       
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THRIDSS · Autonomous Security Command Center</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-        }
+<style>
+  /* ============================================================
+     ROOT VARIABLES & RESET
+  ============================================================ */
+  :root {
+    --bg-deep:       #020810;
+    --bg-panel:      #070f1e;
+    --bg-panel2:     #0a1628;
+    --border:        #1a2d4a;
+    --accent-blue:   #0ea5e9;
+    --accent-cyan:   #06b6d4;
+    --accent-green:  #10b981;
+    --accent-red:    #ef4444;
+    --accent-orange: #f97316;
+    --accent-yellow: #eab308;
+    --accent-purple: #8b5cf6;
+    --text-primary:  #e2e8f0;
+    --text-muted:    #4a6280;
+    --text-dim:      #253a52;
+    --font-mono:     'Share Tech Mono', monospace;
+    --font-main:     'Exo 2', sans-serif;
+  }
 
-        .card {
-            background-color: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-            transition: all 0.2s ease-in-out;
-        }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
 
-        @keyframes pulse-bg {
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-            0%,
-            100% {
-                background-color: #f3f4f6;
-            }
+  /* Grid background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(14,165,233,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(14,165,233,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-            50% {
-                background-color: #e5e7eb;
-            }
-        }
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
 
-        .skeleton {
-            animation: pulse-bg 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+  /* ============================================================
+     LAYOUT
+  ============================================================ */
+  #app {
+    position: relative;
+    z-index: 2;
+    max-width: 1920px;
+    margin: 0 auto;
+    padding: 16px 20px 40px;
+  }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
+  /* ============================================================
+     PANELS / CARDS
+  ============================================================ */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+    opacity: 0.5;
+  }
 
-        .fade-in {
-            animation: fadeIn 0.4s ease-out forwards;
-        }
+  .panel-title {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
 
-        @keyframes highlight-fade {
-            from {
-                background-color: #e0e7ff;
-            }
+  /* ============================================================
+     HEADER BAR
+  ============================================================ */
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-panel);
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
 
-            to {
-                background-color: transparent;
-            }
-        }
+  #header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan), var(--accent-green), var(--accent-blue));
+    background-size: 200% 100%;
+    animation: headerFlow 4s linear infinite;
+  }
 
-        .highlight-flash {
-            animation: highlight-fade 1.5s ease-out forwards;
-        }
+  @keyframes headerFlow {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+  }
 
-        .status-indicator {
-            animation: ripple 1.5s infinite;
-        }
+  .logo-text {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    letter-spacing: 0.3em;
+    color: var(--accent-cyan);
+    text-shadow: 0 0 20px rgba(6,182,212,0.6);
+  }
 
-        @keyframes ripple {
-            0% {
-                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
-            }
+  .logo-sub {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
 
-            70% {
-                box-shadow: 0 0 0 7px rgba(34, 197, 94, 0);
-            }
+  .sys-time {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    color: var(--accent-blue);
+    letter-spacing: 0.12em;
+    text-align: center;
+  }
 
-            100% {
-                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-            }
-        }
+  .sys-date {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+    text-align: center;
+  }
 
-        .status-indicator.disconnected {
-            animation: none !important;
-        }
+  /* ============================================================
+     CONNECTION STATUS BADGE
+  ============================================================ */
+  #connBadge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid;
+    transition: all 0.4s;
+  }
 
-        details summary::marker,
-        details summary::-webkit-details-marker {
-            display: none;
-            content: '';
-        }
+  #connBadge.connecting   { color: var(--accent-yellow); border-color: var(--accent-yellow); background: rgba(234,179,8,0.08); animation: blinkYellow 1s infinite; }
+  #connBadge.connected    { color: var(--accent-green);  border-color: var(--accent-green);  background: rgba(16,185,129,0.08); }
+  #connBadge.disconnected { color: var(--accent-red);    border-color: var(--accent-red);    background: rgba(239,68,68,0.08); animation: blinkRed 0.8s infinite; }
 
-        details summary .details-arrow {
-            transition: transform 0.2s ease-in-out;
-        }
+  @keyframes blinkYellow { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  @keyframes blinkRed    { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
-        details[open] summary .details-arrow {
-            transform: rotate(90deg);
-        }
+  /* ============================================================
+     BIG METRICS
+  ============================================================ */
+  .big-metric {
+    font-family: var(--font-mono);
+    font-size: 36px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
 
-        /* --- CORRECTED TABLE STYLE --- */
-        .log-table-container {
-            max-height: 35rem;
-            /* Set max height on the container */
-            overflow-y: auto;
-            /* Make the container scroll */
-            position: relative;
-            border-radius: 0.375rem;
-            /* rounded-md */
-            border: 1px solid #e5e7eb;
-            /* border-gray-200 */
-            background-color: white;
-        }
+  .small-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
 
-        .log-table thead {
-            position: sticky;
-            /* Make the header sticky *within* the container */
-            top: 0;
-            z-index: 10;
-        }
+  /* ============================================================
+     RISK INDEX RING
+  ============================================================ */
+  .risk-ring-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
 
-        .log-table thead th {
-            background-color: #f3f4f6;
-            /* gray-100 */
-        }
+  .risk-ring-svg  { width: 110px; height: 110px; transform: rotate(-90deg); }
+  .risk-ring-bg   { fill: none; stroke: var(--bg-panel2); stroke-width: 10; }
+  .risk-ring-arc  { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.6s, stroke 0.4s; }
 
-        .log-table tbody tr,
-        .log-table thead tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-            /* This is key */
-        }
+  .risk-value-label {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    transition: color 0.4s;
+  }
 
-        /* --- END CORRECTION --- */
+  /* ============================================================
+     TIER BADGE + BARS
+  ============================================================ */
+  .tier-badge {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 8px 0;
+    text-align: center;
+    transition: color 0.4s;
+  }
 
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
+  .tier-badge.t5 { animation: pulseRed 1.2s infinite; }
 
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
+  @keyframes pulseRed {
+    0%,100% { text-shadow: 0 0 8px var(--accent-red), 0 0 20px var(--accent-red); }
+    50%      { text-shadow: 0 0 30px var(--accent-red), 0 0 60px rgba(239,68,68,0.4); }
+  }
 
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
+  .tier-bars {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 44px;
+    margin-top: 6px;
+  }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a0aec0;
-        }
+  .tier-bar { flex:1; border-radius:2px; transition:opacity 0.5s,box-shadow 0.5s; opacity:0.15; }
+  .tier-bar.active { opacity: 1; }
+  .tier-bar.t1 { height:20%; background:var(--accent-green); }
+  .tier-bar.t2 { height:40%; background:var(--accent-cyan); }
+  .tier-bar.t3 { height:60%; background:var(--accent-yellow); }
+  .tier-bar.t4 { height:80%; background:var(--accent-orange); }
+  .tier-bar.t5 { height:100%; background:var(--accent-red); }
+  .tier-bar.t5.active { animation: pulseBarRed 1.2s infinite; }
 
-        .tabular-nums {
-            font-variant-numeric: tabular-nums;
-        }
-    </style>
+  @keyframes pulseBarRed {
+    0%,100% { box-shadow:0 0 6px var(--accent-red); }
+    50%      { box-shadow:0 0 24px var(--accent-red); }
+  }
+
+  .tier-labels { display:flex; gap:4px; margin-top:4px; }
+  .tier-labels span { flex:1; font-family:var(--font-mono); font-size:8px; text-align:center; color:var(--text-muted); letter-spacing:0.1em; }
+
+  /* ============================================================
+     THRIDSS COMPLIANCE BARS
+  ============================================================ */
+  .compliance-item { margin-bottom: 11px; }
+  .compliance-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .compliance-key  { font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; color:var(--text-primary); }
+  .compliance-pct  { font-family:var(--font-mono); font-size:10px; color:var(--accent-cyan); }
+  .compliance-track { height:4px; background:var(--bg-panel2); border-radius:2px; overflow:hidden; border:1px solid var(--border); }
+  .compliance-fill  { height:100%; border-radius:2px; transition:width 1.2s ease; }
+
+  /* ============================================================
+     ANIMATED BORDER PANEL
+  ============================================================ */
+  .panel-anim {
+    background: var(--bg-panel);
+    border-radius: 6px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel-anim::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    padding: 1px;
+    background: linear-gradient(120deg, var(--accent-blue), var(--accent-purple), var(--accent-cyan), var(--accent-blue));
+    background-size: 300% 300%;
+    animation: gradientBorder 5s linear infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  @keyframes gradientBorder {
+    0%   { background-position:0% 50%; }
+    50%  { background-position:100% 50%; }
+    100% { background-position:0% 50%; }
+  }
+
+  /* ============================================================
+     FEED TABLE
+  ============================================================ */
+  .feed-scroll {
+    max-height: 340px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .feed-scroll::-webkit-scrollbar       { width: 5px; }
+  .feed-scroll::-webkit-scrollbar-track { background: transparent; }
+  .feed-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .feed-table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:11px; }
+
+  .feed-table thead th {
+    padding: 8px 10px;
+    text-align: left;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.12em;
+    font-size: 9px;
+    position: sticky;
+    top: 0;
+    background: var(--bg-panel);
+    z-index: 2;
+  }
+
+  .feed-table tbody tr {
+    border-bottom: 1px solid rgba(26,45,74,0.5);
+    transition: background 0.2s;
+  }
+
+  .feed-table tbody tr:hover { background: rgba(14,165,233,0.04); }
+  .feed-table tbody td { padding: 7px 10px; color: var(--text-primary); }
+
+  .sev-badge { display:inline-block; padding:2px 7px; border-radius:3px; font-size:9px; letter-spacing:0.1em; font-weight:600; }
+  .sev-CRITICAL { background:rgba(239,68,68,0.15);  color:#f87171; border:1px solid rgba(239,68,68,0.3); }
+  .sev-HIGH     { background:rgba(249,115,22,0.15); color:#fb923c; border:1px solid rgba(249,115,22,0.3); }
+  .sev-MEDIUM   { background:rgba(234,179,8,0.12);  color:#facc15; border:1px solid rgba(234,179,8,0.3); }
+  .sev-LOW      { background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.3); }
+
+  /* ============================================================
+     AI REASON LOG
+  ============================================================ */
+  .ai-reason-scroll {
+    max-height: 148px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .ai-reason-scroll::-webkit-scrollbar       { width:4px; }
+  .ai-reason-scroll::-webkit-scrollbar-thumb { background:var(--border); }
+
+  .ai-entry {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-primary);
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(26,45,74,0.4);
+    line-height: 1.5;
+  }
+
+  .ai-entry .ai-time { color:var(--accent-cyan); margin-right:8px; }
+  .ai-entry .ai-text { color:#7ca9cc; }
+
+  /* ============================================================
+     SECTION DIVIDER
+  ============================================================ */
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0 10px;
+  }
+
+  .section-label::before,
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* Row fade-in */
+  @keyframes fadeInRow {
+    from { opacity:0; background:rgba(14,165,233,0.08); }
+    to   { opacity:1; background:transparent; }
+  }
+
+  .row-new { animation: fadeInRow 0.5s ease; }
+
+  /* Chart containers */
+  .chart-wrap { position:relative; width:100%; }
+
+  /* Glow */
+  .glow-blue  { box-shadow:0 0 20px rgba(14,165,233,0.12); }
+</style>
 </head>
 
-<body class="p-4 lg:p-6 bg-gray-50">
+<body>
+<div id="app">
 
-        <main id="dashboard-view" class="max-w-7xl mx-auto opacity-0 transition-opacity duration-500">
-                <header class="mb-6">
-                        <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg shadow-lg p-5 text-white">
-                                <div class="flex items-center justify-between flex-wrap gap-x-6 gap-y-3">
-                                        <div class="flex items-center gap-3">
-                                                <div class="bg-indigo-500/20 p-2 rounded-lg"><svg
-                                class="w-6 h-6 text-indigo-300" fill="none"                                
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2"                                    
-                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
-                                                                    </path>
-                                                            </svg></div>
-                                                <div>
-                                                        <h1 class="text-lg lg:text-xl font-semibold leading-tight">AI
-                                Security Agent</h1>
-                                                        <p class="text-white/60 text-xs">Real-time Detection &
-                                Monitoring</p>
-                                                    </div>
-                                            </div>
-                                        <div class="flex items-center gap-3">
-                                                <div id="connection-status"                            
-                            class="flex items-center gap-1.5 bg-yellow-500/10 px-2.5 py-1 rounded-full border border-yellow-500/30 text-xs">
-                                                        <div
-                                class="status-indicator w-1.5 h-1.5 bg-yellow-400 rounded-full disconnected"></div>
-                                                        <span class="font-medium text-yellow-300">Connecting...</span>
-                                                    </div><button id="run-simulation-btn"
-                            title="Run Ethical Attack Simulation Test"                            
-                            class="flex items-center gap-1.5 bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/30 text-red-300 hover:bg-red-500/20 transition text-xs disabled:opacity-60 disabled:cursor-not-allowed"><svg
-                                                                class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2"                                     d="M13 10V3L4 14h7v7l9-11h-7z">
-                                </path>
-                                                            </svg><span class="font-medium">Simulate
-                                Attacks</span></button>
-                                            </div>
-                                    </div>
-                            </div>
-                    </header>
+  <!-- ============================================================
+       HEADER BAR
+  ============================================================ -->
+  <div id="header">
+    <div>
+      <div class="logo-text">THRIDSS</div>
+      <div class="logo-sub">Autonomous Fintech Threat Defense Grid &nbsp;·&nbsp; Hybrid LSTM + DRL + Dempster-Shafer &nbsp;·&nbsp; v4.2.1</div>
+    </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
-                        <div class="lg:col-span-3 space-y-5">
-                                <section class="card p-4">
-                                        <h2 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">
-                        Event Trend (Last 30
-                                                Min)</h2>
-                                        <div class="chart-container" style="height: 240px;"><canvas
-                            id="attackTrendChart"></canvas></div>
-                                    </section>
+    <div>
+      <div class="sys-time" id="sysTime">00:00:00</div>
+      <div class="sys-date" id="sysDate">--</div>
+    </div>
 
-                                <section class="card p-4">
-                                        <h2 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">
-                        Security Log</h2>
-                                        <div class="log-table-container">
-                                                <table class="log-table w-full text-sm table-fixed">
-                                                        <thead
-                                class="bg-gray-100 sticky top-0 z-10 border-b border-gray-300">
-                                                                <tr>
-                                                                        <th                                        
-                                        class="py-2 px-3 text-left text-xs font-semibold text-gray-500 uppercase w-[15%]">
-                                                                                Time</th>
-                                                                        <th                                        
-                                        class="py-2 px-3 text-left text-xs font-semibold text-gray-500 uppercase w-[30%]">
-                                                                                Type</th>
-                                                                        <th                                        
-                                        class="py-2 px-3 text-left text-xs font-semibold text-gray-500 uppercase w-[20%]">
-                                                                                Source</th>
-                                                                        <th                                        
-                                        class="py-2 px-3 text-left text-xs font-semibold text-gray-500 uppercase w-[20%]">
-                                                              _                  Severity</th>
-                                                                        <th                                        
-                                        class="py-2 px-3 text-left text-xs font-semibold text-gray-500 uppercase w-[15%]">
-                                                                                Conf.</th>
-                                                                    </tr>
-                                                            </thead>
-                                  _                      <tbody id="attackLogBody" class="divide-y divide-gray-100">
-                                                                <tr>
-                                                                        <td colspan="5"
-                                        class="p-8 text-center text-gray-400 text-sm">Loading events...</td>
-                                                                    </tr>
-                                                            </tbody>
-                                                    </table>
-                                            </div>
-                                    </section>
-                            </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="text-align:right;">
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:0.15em;">AI ENGINE</div>
+        <div id="aiEngineHeader" style="font-family:var(--font-mono);font-size:12px;color:var(--accent-green);letter-spacing:0.1em;">INITIALIZING</div>
+      </div>
+      <div id="connBadge" class="connecting">&#9679; CONNECTING</div>
+    </div>
+  </div>
 
-                        <div class="lg:col-span-2 space-y-5">
-                                <section class="card p-4">
-                                        <h2 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">
-                        System Health</h2>
-                                        <div class="space-y-3">
-                                                <div class="flex justify-between items-center"><span                    
-                                            class="text-xs font-medium text-gray-500">Requests / Min</span>
-                                                        <p id="requests"
-                                class="text-lg font-semibold text-gray-700 tabular-nums">0</p>
-                                                    </div>
-                                                <div class="flex justify-between items-center"><span                    
-                                            class="text-xs font-medium text-gray-500">Threats / Min</span>
-                                                        <p id="errors"
-                                class="text-lg font-semibold text-red-600 tabular-nums">0</p>
-                                                    </div>
-                                                <div class="flex justify-between items-center"><span                    
-                                            class="text-xs font-medium text-gray-500">Dashboard Users</span>
-                                                        <p id="ws-clients"
-                                class="text-lg font-semibold text-blue-600 tabular-nums">0</p>
-                                                    </div>
-                                                <div class="pt-2 border-t border-gray-100">
-                                                        <h3 class="text-xs font-medium text-gray-500 mb-1.5">AI Analysis
-                                Status</h3>
-                                                        <div class="flex items-center gap-2 mb-0.5"><span
-                                    id="llm-status-circle"             _                      
-                                    class="w-2 h-2 rounded-full bg-gray-400"></span><span id="llm-status-text"          
-                                                              class="text-sm font-semibold text-gray-600">UNKNOWN</span>
-                            </div>
-                                                        <p id="llm-reason" class="text-xs text-gray-400 italic truncate"
-                                title="Checking status...">
-                                                                Checking status...</p>
-                                                    </div>
-                                            </div>
-                                    </section>
-                s              <section class="card p-4">
-                                        <h2 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">
-                        Severity Distribution
-                                            </h2>
-                                        <div class="chart-container" style="height: 200px;"><canvas
-                            id="severityDistributionChart"></canvas>
-                                            </div>
-                                    </section>
-                                <section class="card p-4">
-                                        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                                <h2
-                            class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Website Monitors</h2>
-                                                <button onclick="showAddWebsiteModal()" title="Add Website"            
-                                           
-                            class="px-2.5 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition text-xs flex items-center gap-1 shadow-sm"><svg
-                                                                class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2"                                     d="M12 4v16m8-8H4"></path>
-                                                            </svg> Add</button>
-                                            </div>
-                                        <div id="websites-container"
-                        class="space-y-1.5 max-h-[20rem] overflow-y-auto pr-1">
-                                                <div class="text-center py-5 text-xs text-gray-400">Loading websites...
-                        </div>
-                                            </div>
-                                    </section>
-                            </div>
-                    </div>
-            </main>
+  <!-- ============================================================
+       SECTION — CORE TELEMETRY
+  ============================================================ -->
+  <div class="section-label">Core Defense Telemetry</div>
 
-        <div id="add-website-modal"        
-        class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-200"
-                onclick="hideAddWebsiteModal()">
-                <div class="card w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-                        <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-md font-semibold text-gray-800">Add Website Monitor</h3><button        
-                                onclick="hideAddWebsiteModal()"                    
-                    class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-                            </div>
-                        <form id="add-website-form" class="space-y-3">
-                                <div><label for="website-url"
-                        class="block text-xs font-medium text-gray-600 mb-1">Website URL
-                                                *</label><input type="text" id="website-url" required                  
-                             
-                        class="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent text-sm"
-                                                placeholder="example.com or https://..."></div>
-                                <div><label for="check-interval"
-                        class="block text-xs font-medium text-gray-600 mb-1">Interval
-                                                (sec)</label><input type="number" id="check-interval" value="300"
-                        min="30" step="10"                        
-                        class="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent text-sm">
-                                    </div>
-                                <fieldset class="pt-1">
-                                        <legend class="text-xs font-medium text-gray-600 mb-1.5">Checks:</legend>
-                                        <div class="grid grid-cols-2 gap-x-4 gap-y-1.5"><label
-                            class="flex items-center space-x-1.5"><input                                 type="checkbox"
-                                id="check-ssl" checked                                
-                                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span    
-                                                            class="text-xs text-gray-700">SSL/TLS</span></label><label  
-                                                      class="flex items-center space-x-1.5"><input type="checkbox"
-                                id="check-security-headers"                                 checked                    
-                                           
-                                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span    
-                                                            class="text-xs text-gray-700">Headers</span></label><label
-                            s                          class="flex items-center space-x-1.5"><input type="checkbox"
-                                id="check-performance" checked                                
-                                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span    
-                                                            class="text-xs text-gray-700">Perf.</span></label><label    
-                                                    class="flex items-center space-x-1.5"><input type="checkbox"
-                                id="check-content" s                             
-                                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><span    
-                                                            class="text-xs text-gray-700">Content</span></label></div>
-                    s              </fieldset>
-                                <div class="flex gap-3 pt-4 border-t border-gray-100"><button type="button"            
-                                    onclick="hideAddWebsiteModal()"                        
-                        class="flex-1 px-4 py-1.5 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition font-medium text-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400">Cancel</button><button
-                                                type="submit"                        
-                        class="flex-1 px-4 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition font-medium text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50">Add</button>
-                                    </div>
-                            </form>
-                    </div>
-            </div>
+  <!-- Row 1a: Risk + Tier + 4 counters -->
+  <div style="display:grid;grid-template-columns:195px 215px repeat(4,1fr);gap:12px;margin-bottom:12px;">
 
-        <div id="notification-container" class="fixed top-4 right-4 z-[100] w-full max-w-xs space-y-2"></div>
+    <!-- GLOBAL RISK INDEX -->
+    <div class="panel-anim glow-blue" style="padding:16px;">
+      <div class="panel-title">Global Risk Index</div>
+      <div class="risk-ring-wrap">
+        <svg class="risk-ring-svg" viewBox="0 0 120 120">
+          <circle class="risk-ring-bg" cx="60" cy="60" r="50"/>
+          <circle id="riskArc" class="risk-ring-arc" cx="60" cy="60" r="50"
+            stroke="#10b981" stroke-dasharray="314" stroke-dashoffset="267"/>
+        </svg>
+        <div style="margin-top:-76px;margin-bottom:22px;text-align:center;position:relative;z-index:1;">
+          <div id="riskValue" class="risk-value-label" style="color:var(--accent-green);">15</div>
+          <div style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.12em;">/ 100</div>
+        </div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-align:center;letter-spacing:0.1em;" id="riskLabel">NOMINAL</div>
+    </div>
 
-       
-    <script>
-        const MAX_TREND_POINTS = 30; const MAX_LOG_ROWS = 150; let attackTrendChart, severityDistributionChart; let ws; const wsRetryInterval = 5000;
+    <!-- ESCALATION TIER -->
+    <div class="panel">
+      <div class="panel-title">Escalation Tier</div>
+      <div id="tierBadge" class="tier-badge" style="color:var(--accent-green);">TIER 1</div>
+      <div class="tier-bars">
+        <div class="tier-bar t1 active" id="tb1"></div>
+        <div class="tier-bar t2" id="tb2"></div>
+        <div class="tier-bar t3" id="tb3"></div>
+        <div class="tier-bar t4" id="tb4"></div>
+        <div class="tier-bar t5" id="tb5"></div>
+      </div>
+      <div class="tier-labels">
+        <span>T1</span><span>T2</span><span>T3</span><span>T4</span><span>T5</span>
+      </div>
+    </div>
 
-        // --- ALL FUNCTION DEFINITIONS ---
-        // (These functions are unchanged, placing them here in correct order)
-        const getSeverityStyles = (severity = 'UNKNOWN') => { const styles = { CRITICAL: { text: 'text-red-700', bg: 'bg-red-100', border: 'border-red-300' }, HIGH: { text: 'text-orange-700', bg: 'bg-orange-100', border: 'border-orange-300' }, MEDIUM: { text: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-300' }, LOW: { text: 'text-green-700', bg: 'bg-green-100', border: 'border-green-300' }, default: { text: 'text-gray-600', bg: 'bg-gray-100', border: 'border-gray-300' } }; return styles[severity] || styles.default; };
-        const getWebsiteStatusStyles = (status = 'UNKNOWN') => { const styles = { 'HEALTHY': { text: 'text-green-600', border: 'border-l-green-400', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' }, 'TIMEOUT': { text: 'text-red-600', border: 'border-l-red-400', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }, 'CONNECTION_ERROR': { text: 'text-red-700', border: 'border-l-red-500', icon: 'M18.364 5.636a9 9 0 010 12.728m-12.728 0a9 9 0 010-12.728m12.728 0L5.636 18.364' }, 'REQUEST_ERROR': { text: 'text-red-700', border: 'border-l-red-500', icon: 'M18.364 5.636a9 9 0 010 12.728m-12.728 0a9 9 0 010-12.728m12.728 0L5.636 18.364' }, 'MONITORING_ERROR': { text: 'text-gray-500', border: 'border-l-gray-400', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }, 'PENDING': { text: 'text-blue-500', border: 'border-l-blue-400', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }, 'UNKNOWN': { text: 'text-gray-500', border: 'border-l-gray-400', icon: 'M8.228 9c.549-1.165 2.03-1.165 2.578 0l4.262 8.526c.549 1.165-.78 2.474-1.94 1.94l-3.4-.993a1.875 1.875 0 01-1.097 0l-3.4.993c-1.16.534-2.489-.775-1.94-1.94L8.228 9z' } }; if (status?.startsWith('HTTP_')) { const code = parseInt(status.split('_')[1] || "0"); if (code >= 500) return { text: 'text-red-600', border: 'border-l-red-400', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' }; if (code >= 400) return { text: 'text-orange-500', border: 'border-l-orange-400', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }; } return styles[status] || styles.UNKNOWN; };
-        function renderSkeleton(count, type) { let skeletonHtml = ''; if (type === 'website') { const card = `<div class="bg-white rounded-md shadow-sm border p-3 skeleton animate-pulse"><div class="h-3.5 bg-gray-300 rounded w-3/4 mb-1.5"></div><div class="h-2.5 bg-gray-300 rounded w-1/2 mb-2.5"></div><div class="flex justify-between pt-1.5 border-t border-gray-100 mt-2"><div class="h-2.5 bg-gray-300 rounded w-1/4"></div><div class="h-2.5 bg-gray-300 rounded w-1/4"></div></div></div>`; skeletonHtml = Array(count).fill(card).join('<div class="h-1.5"></div>'); } else { const row = `<tr><td class="py-2 px-3"><div class="h-4 bg-gray-300 rounded skeleton w-16"></div></td><td class="py-2 px-3"><div class="h-4 bg-gray-300 rounded skeleton w-28"></div></td><td class="py-2 px-3"><div class="h-4 bg-gray-300 rounded skeleton w-20"></div></td><td class="py-2 px-3"><div class="h-5 bg-gray-300 rounded-full skeleton w-16"></div></td><td class="py-2 px-3"><div class="h-4 bg-gray-300 rounded skeleton w-10"></div></td></tr>`; skeletonHtml = Array(count).fill(row).join(''); } return skeletonHtml; }
-        function initializeCharts() { Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0, 0, 0, 0.7)'; Chart.defaults.plugins.tooltip.titleFont.size = 12; Chart.defaults.plugins.tooltip.bodyFont.size = 11; Chart.defaults.plugins.legend.labels.boxWidth = 10; Chart.defaults.plugins.legend.labels.padding = 10; const commonOptions = { responsive: true, maintainAspectRatio: false, animation: { duration: 300 } }; const attackCtx = document.getElementById('attackTrendChart')?.getContext('2d'); if (attackCtx) { attackTrendChart = new Chart(attackCtx, { type: 'line', data: { labels: [], datasets: [{ label: 'Events/Min', data: [], borderColor: '#6366f1', borderWidth: 1.5, tension: 0.3, fill: true, backgroundColor: 'rgba(99, 102, 241, 0.1)', pointRadius: 0, pointHoverRadius: 4 }] }, options: { ...commonOptions, scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } } }, x: { ticks: { maxRotation: 0, autoSkipPadding: 20, font: { size: 10 } } } }, plugins: { legend: { display: false } } } }); } const severityCtx = document.getElementById('severityDistributionChart')?.getContext('2d'); if (severityCtx) { severityDistributionChart = new Chart(severityCtx, { type: 'doughnut', data: { labels: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#dc2626', '#f97316', '#f59e0b', '#16a34a'], borderWidth: 1, borderColor: '#fff', hoverOffset: 6 }] }, options: { ...commonOptions, cutout: '70%', plugins: { legend: { display: true, position: 'right', labels: { padding: 8, font: { size: 11 } } } } } }); } }
-        function updateChartsFromLogData(logData = []) { if (!attackTrendChart || !severityDistributionChart) return; const severityCounts = { 'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0 }; const trendData = new Map(); logData.forEach(attack => { const severity = attack.severity || 'UNKNOWN'; if (severity in severityCounts) severityCounts[severity]++; try { const timestamp = new Date(attack.timestamp); if (isNaN(timestamp)) return; const minuteLabel = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); trendData.set(minuteLabel, (trendData.get(minuteLabel) || 0) + 1); } catch (e) { /* Ignore */ } }); severityDistributionChart.data.datasets[0].data = [severityCounts.CRITICAL, severityCounts.HIGH, severityCounts.MEDIUM, severityCounts.LOW]; severityDistributionChart.update('none'); const sortedLabels = Array.from(trendData.keys()).sort((a, b) => a.localeCompare(b)); const slicedLabels = sortedLabels.slice(-MAX_TREND_POINTS); const slicedData = slicedLabels.map(label => trendData.get(label)); attackTrendChart.data.labels = slicedLabels; attackTrendChart.data.datasets[0].data = slicedData; attackTrendChart.update('none'); }
-        function incrementallyUpdateCharts(attack) { if (!attackTrendChart || !severityDistributionChart || !attack) return; try { const severity = attack.severity || 'UNKNOWN'; const severityIndex = severityDistributionChart.data.labels.indexOf(severity); if (severityIndex > -1) { severityDistributionChart.data.datasets[0].data[severityIndex] = (severityDistributionChart.data.datasets[0].data[severityIndex] || 0) + 1; severityDistributionChart.update('none'); } const timestamp = new Date(attack.timestamp); if (isNaN(timestamp)) return; const minuteLabel = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); const labels = attackTrendChart.data.labels; const dataPoints = attackTrendChart.data.datasets[0].data; if (labels.length > 0 && labels[labels.length - 1] === minuteLabel) { dataPoints[dataPoints.length - 1] = (dataPoints[dataPoints.length - 1] || 0) + 1; } else { labels.push(minuteLabel); dataPoints.push(1); if (labels.length > MAX_TREND_POINTS) { labels.shift(); dataPoints.shift(); } } attackTrendChart.update('none'); } catch (e) { console.error("Chart update error:", e); } }
-        function updateMetrics(data = {}) { const requestsEl = document.getElementById("requests"); if (requestsEl) requestsEl.textContent = Number(data.requests_per_minute) || 0; const errorsEl = document.getElementById("errors"); if (errorsEl) errorsEl.textContent = Number(data.error_events_per_minute) || 0; const wsClientsEl = document.getElementById("ws-clients"); if (wsClientsEl) wsClientsEl.textContent = Number(data.active_ws_clients) || 0; const llmStatus = data.llm_status || 'UNKNOWN'; const llmReason = data.llm_reason || 'Status unavailable.'; const statusTextEl = document.getElementById("llm-status-text"); const statusCircleEl = document.getElementById("llm-status-circle"); const reasonEl = document.getElementById("llm-reason"); if (!statusTextEl || !statusCircleEl || !reasonEl) return; statusTextEl.textContent = llmStatus; reasonEl.textContent = llmReason; reasonEl.title = llmReason; statusCircleEl.className = 'w-2 h-2 rounded-full'; statusTextEl.className = 'text-sm font-semibold'; switch (llmStatus) { case 'ACTIVE': statusCircleEl.classList.add('bg-green-500'); statusTextEl.classList.add('text-green-700'); break; case 'DEGRADED': statusCircleEl.classList.add('bg-orange-500'); statusTextEl.classList.add('text-orange-600'); break; case 'OPEN': statusCircleEl.classList.add('bg-red-500'); statusTextEl.classList.add('text-red-600'); break; default: statusCircleEl.classList.add('bg-gray-400'); statusTextEl.classList.add('text-gray-600'); break; } }
-        function updateWebsiteMonitoringUI(websites = []) { const container = document.getElementById('websites-container'); if (!container) return; container.innerHTML = ''; if (websites.length === 0) { container.innerHTML = `<div class="text-center py-5 text-xs text-gray-400 website-placeholder">No websites monitored.</div>`; return; } container.innerHTML = websites.map(createWebsiteCard).join(''); }
-        function updateSingleWebsiteCard(website) { const container = document.getElementById('websites-container'); if (!container || !website || !website.url) return; const cardId = `website-card-${btoa(website.url)}`; const newCardHTML = createWebsiteCard(website); const oldCard = document.getElementById(cardId); container.querySelector('.website-placeholder')?.remove(); if (oldCard) { const isOpen = oldCard.open; oldCard.outerHTML = newCardHTML; const newCard = document.getElementById(cardId); if (newCard?.tagName === 'DETAILS') { newCard.open = isOpen; newCard.classList.add('highlight-flash'); setTimeout(() => newCard.classList.remove('highlight-flash'), 1500); } } else { container.insertAdjacentHTML('afterbegin', newCardHTML); document.getElementById(cardId)?.classList.add('fade-in'); } }
-        function createWebsiteCard(website) { const { current_health: health, config } = website || {}; const status = health?.status || 'PENDING'; const styles = getWebsiteStatusStyles(status); const respTime = health?.response_time; const sslDays = health?.ssl_days_remaining; const cardId = `website-card-${btoa(website.url)}`; let respTimeStr = (respTime != null && respTime >= 0) ? `${respTime.toFixed(0)}ms` : "-"; let sslDaysStr = typeof sslDays === 'number' ? `${sslDays} days` : "-"; let sslClasses = "font-medium text-gray-600"; if (typeof sslDays === 'number') { if (sslDays < 7) sslClasses = "font-medium text-red-600"; else if (sslDays < 30) sslClasses = "font-medium text-orange-500"; } let errorsList = ""; if (health?.errors?.length > 0) { const errorItems = health.errors.slice(0, 3).map(e => `<li class="truncate text-[11px]" title="${e}">${e}</li>`).join(''); errorsList = `<div class="mt-1.5 pt-1.5 border-t border-gray-100"><ul class="list-disc pl-4 space-y-0.5 text-red-500">${errorItems}</ul></div>`; } return ` <details id="${cardId}" class="website-card bg-white rounded-md shadow-sm border border-l-4 ${styles.border} overflow-hidden block"> <summary class="flex items-center justify-between p-2 cursor-pointer hover:bg-gray-50/70 transition"> <div class="flex items-center gap-2 min-w-0"> <svg class="w-4 h-4 ${styles.text} flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="${styles.icon}" clip-rule="evenodd"></path></svg> <div class="min-w-0 flex-1"> <p class="font-medium text-gray-700 text-xs truncate" title="${website.url}">${website.url}</p> <p class="text-[10px] ${styles.text} font-medium uppercase tracking-wide">${status.replace('_', ' ')}</p> </div> </div> <svg class="w-4 h-4 text-gray-400 details-arrow flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg> </summary> <div class="px-2.5 pb-2 pt-1.5 bg-gray-50/50 text-[11px] space-y-1 border-t border-gray-100"> <p class="flex justify-between"><span>Response:</span> <span class="font-medium ${respTime > 1500 ? 'text-red-500' : 'text-gray-600'}">${respTimeStr}</span></p> <p class="flex justify-between"><span>SSL Expiry:</span> <span class="${sslClasses}">${sslDaysStr}</span></p> ${errorsList} <div class="pt-1 text-right"> <button onclick="removeWebsite('${website.url}')" class="text-red-600 hover:text-red-800 font-medium text-[11px] hover:underline focus:outline-none">Remove</button> </div> </div> </details>`; }
+    <!-- TOTAL ATTACKS -->
+    <div class="panel" style="text-align:center;">
+      <div class="panel-title">Total Attacks</div>
+      <div id="totalAttacks" class="big-metric" style="color:var(--accent-red);margin-top:8px;">0</div>
+      <div class="small-label" style="margin-top:8px;">Blocked Events</div>
+    </div>
 
-        // --- THIS IS THE FIX ---
-        // Moved addAttackToLog function definition *before* populateLogTable
-        function addAttackToLog(attack, isInitialLoad = false) {
-            console.log("[addAttackToLog] Received data:", attack); // Log incoming data
-            const tableBody = document.getElementById("attackLogBody");
-            if (!tableBody) { console.error("[addAttackToLog] Table body 'attackLogBody' not found!"); return; }
-            tableBody.querySelector('td[colspan="5"]')?.parentElement.remove(); // Remove placeholder
+    <!-- TOP ATTACKER IP -->
+    <div class="panel" style="text-align:center;">
+      <div class="panel-title">Top Attacker IP</div>
+      <div id="topAttackerIP" class="big-metric" style="color:var(--accent-orange);font-size:18px;margin-top:14px;word-break:break-all;">N/A</div>
+      <div class="small-label" style="margin-top:8px;" id="topAttackerCount">0 hits</div>
+    </div>
 
-            const row = tableBody.insertRow(0); // Add to top
-            const styles = getSeverityStyles(attack.severity);
-            const confidence = typeof attack.confidence === 'number' ? `${(attack.confidence * 100).toFixed(0)}%` : 'N/A';
-            let timeStr = 'Invalid Date';
-            try { timeStr = new Date(attack.timestamp).toLocaleTimeString([], { hour12: false }); } catch (e) { console.warn("[addAttackToLog] Invalid timestamp:", attack.timestamp); }
+    <!-- REQUESTS / MIN -->
+    <div class="panel" style="text-align:center;">
+      <div class="panel-title">Requests / Min</div>
+      <div id="reqPerMin" class="big-metric" style="color:var(--accent-blue);margin-top:8px;">0</div>
+      <div class="small-label" style="margin-top:8px;">Ingress Rate</div>
+    </div>
 
-            const colWidths = ['15%', '30%', '20%', '20%', '15%'];
-            row.innerHTML = `<td class="py-1.5 px-3 font-mono text-gray-500 text-xs whitespace-nowrap" style="width: ${colWidths[0]}">${timeStr}</td><td class="py-1.5 px-3 font-medium text-gray-700 text-sm whitespace-nowrap truncate" title="${attack.attack_type || ''}" style="width: ${colWidths[1]}">${attack.attack_type || 'Unknown'}</td><td class="py-1.5 px-3 text-gray-600 text-sm whitespace-nowrap" style="width: ${colWidths[2]}">${attack.ip || 'SYSTEM'}</td><td class="py-1.5 px-3 whitespace-nowrap" style="width: ${colWidths[3]}"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full border ${styles.bg} ${styles.text} ${styles.border}">${attack.severity || 'N/A'}</span></td><td class="py-1.5 px-3 font-medium ${styles.text} text-sm whitespace-nowrap" style="width: ${colWidths[4]}">${confidence}</td>`;
-            // --- FIX: Apply styles to the row ---
-            row.style.display = 'table';
-            row.style.width = '100%';
-            row.style.tableLayout = 'fixed';
-            // --- END FIX ---
-            console.log("[addAttackToLog] Row added for:", attack.attack_type);
+    <!-- THREAT EVENTS / MIN -->
+    <div class="panel" style="text-align:center;">
+      <div class="panel-title">Threat Events / Min</div>
+      <div id="threatPerMin" class="big-metric" style="color:var(--accent-red);margin-top:8px;">0</div>
+      <div class="small-label" style="margin-top:8px;">Anomaly Rate</div>
+    </div>
 
-            while (tableBody.rows.length > MAX_LOG_ROWS) { tableBody.deleteRow(-1); }
+  </div>
 
-          _  if (!isInitialLoad) {
-                console.log("[addAttackToLog] Applying styles & updating charts incrementally.");
-                row.classList.add('highlight-flash');
-                setTimeout(() => row.classList.remove('highlight-flash'), 1500);
-s                if (attack.severity === 'HIGH' || attack.severity === 'CRITICAL') {
-                    showNotification(`ALERT: ${attack.severity} event - ${attack.attack_type || 'Unknown'}`, 'error');
-                }
-                incrementallyUpdateCharts(attack);
-            }
+  <!-- Row 1b: WS clients + AI status + Decay model -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
+
+    <div class="panel" style="text-align:center;">
+      <div class="panel-title">Active Dashboards</div>
+      <div id="wsClients" class="big-metric" style="color:var(--accent-purple);margin-top:6px;">0</div>
+      <div class="small-label" style="margin-top:6px;">WebSocket Connections</div>
+    </div>
+
+    <div class="panel" style="text-align:center;">
+      <div class="panel-title">AI Engine Status</div>
+      <div id="aiStatusPanel" class="big-metric" style="color:var(--text-muted);font-size:22px;margin-top:10px;letter-spacing:0.08em;">UNKNOWN</div>
+      <div class="small-label" style="margin-top:8px;">Hybrid LSTM · DRL · Dempster-Shafer</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Risk Decay Model &nbsp;·&nbsp; Auto-Mitigation Engine</div>
+      <div style="margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);">DECAY RATE</span>
+          <span id="decayRateLabel" style="font-family:var(--font-mono);font-size:9px;color:var(--accent-cyan);">-1 pt / 5s</span>
+        </div>
+        <div class="compliance-track" style="height:6px;">
+          <div id="decayBar" class="compliance-fill" style="width:85%;background:linear-gradient(90deg,var(--accent-green),var(--accent-cyan));"></div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:8px;line-height:1.6;">
+          Rolling SOC mitigation active. Risk floor: 15. Decay accelerates during quiet periods.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       SECTION — ANALYTICS
+  ============================================================ -->
+  <div class="section-label">Analytics &amp; Threat Intelligence</div>
+
+  <!-- Trend + Severity -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;">
+
+    <div class="panel glow-blue">
+      <div class="panel-title">Live Threat Timeline &nbsp;·&nbsp; Events per Interval</div>
+      <div class="chart-wrap" style="height:200px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Severity Distribution</div>
+      <div class="chart-wrap" style="height:165px;">
+        <canvas id="severityChart"></canvas>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+        <div style="font-family:var(--font-mono);font-size:9px;"><span style="color:#f87171;">&#9632;</span> CRIT <span id="sevCritical" style="color:#f87171;">0</span></div>
+        <div style="font-family:var(--font-mono);font-size:9px;"><span style="color:#fb923c;">&#9632;</span> HIGH <span id="sevHigh" style="color:#fb923c;">0</span></div>
+        <div style="font-family:var(--font-mono);font-size:9px;"><span style="color:#facc15;">&#9632;</span> MED  <span id="sevMedium" style="color:#facc15;">0</span></div>
+        <div style="font-family:var(--font-mono);font-size:9px;"><span style="color:#34d399;">&#9632;</span> LOW  <span id="sevLow" style="color:#34d399;">0</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Cluster + Confidence -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+
+    <div class="panel">
+      <div class="panel-title">Attack Type Clustering &nbsp;·&nbsp; Frequency Distribution</div>
+      <div class="chart-wrap" style="height:200px;">
+        <canvas id="clusterChart"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Dempster-Shafer Confidence Fusion Gauge</div>
+      <div style="display:flex;align-items:center;gap:20px;margin-top:4px;">
+        <div class="chart-wrap" style="height:155px;width:210px;flex-shrink:0;">
+          <canvas id="confidenceGauge"></canvas>
+        </div>
+        <div>
+          <div id="confidencePct" style="font-family:var(--font-mono);font-size:44px;font-weight:700;color:var(--accent-cyan);">50%</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:4px;letter-spacing:0.1em;">MODEL CERTAINTY</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:10px;line-height:1.7;">
+            Fuses LSTM probability,<br>DRL Q-value signal,<br>D-S belief function.
+          </div>
+          <div class="compliance-track" style="height:6px;width:150px;margin-top:12px;">
+            <div id="confidenceFill" class="compliance-fill" style="width:50%;background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan));"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       SECTION — THRIDSS GOVERNANCE
+  ============================================================ -->
+  <div class="section-label">THRIDSS Governance &nbsp;·&nbsp; KPI Compliance Dashboard</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+
+    <!-- COMPLIANCE PANEL -->
+    <div class="panel">
+      <div class="panel-title">THRIDSS Principle Compliance &nbsp;·&nbsp; Live KPI Scores</div>
+      <div style="margin-top:6px;">
+
+        <div class="compliance-item">
+          <div class="compliance-header">
+            <span class="compliance-key">T &nbsp;·&nbsp; TRANSPARENCY</span>
+            <span class="compliance-pct" id="kpi-T">--</span>
+          </div>
+          <div class="compliance-track">
+            <div class="compliance-fill" id="bar-T" style="width:0%;background:linear-gradient(90deg,#0ea5e9,#38bdf8);"></div>
+          </div>
+        </div>
+
+        <div class="compliance-item">
+          <div class="compliance-header">
+            <span class="compliance-key">H &nbsp;·&nbsp; HUMAN CONTROL</span>
+            <span class="compliance-pct" id="kpi-H">--</span>
+          </div>
+          <div class="compliance-track">
+            <div class="compliance-fill" id="bar-H" style="width:0%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);"></div>
+          </div>
+        </div>
+
+        <div class="compliance-item">
+          <div class="compliance-header">
+            <span class="compliance-key">R &nbsp;·&nbsp; ROBUSTNESS</span>
+            <span class="compliance-pct" id="kpi-R">--</span>
+          </div>
+          <div class="compliance-track">
+            <div class="compliance-fill" id="bar-R" style="width:0%;background:linear-gradient(90deg,#10b981,#34d399);"></div>
+          </div>
+        </div>
+
+        <div class="compliance-item">
+          <div class="compliance-header">
+            <span class="compliance-key">I &nbsp;·&nbsp; INTERPRETABILITY</span>
+            <span class="compliance-pct" id="kpi-I">--</span>
+          </div>
+          <div class="compliance-track">
+            <div class="compliance-fill" id="bar-I" style="width:0%;background:linear-gradient(90deg,#06b6d4,#22d3ee);"></div>
+          </div>
+        </div>
+
+        <div class="compliance-item">
+          <div class="compliance-header">
+            <span class="compliance-key">D &nbsp;·&nbsp; DATA PRIVACY</span>
+            <span class="compliance-pct" id="kpi-D">--</span>
+          </div>
+          <div class="compliance-track">
+            <div class="compliance-fill" id="bar-D" style="width:0%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+          </div>
+        </div>
+
+        <div class="compliance-item">
+          <div class="compliance-header">
+            <span class="compliance-key">S &nbsp;·&nbsp; SECURITY</span>
+            <span class="compliance-pct" id="kpi-S">--</span>
+          </div>
+          <div class="compliance-track">
+            <div class="compliance-fill" id="bar-S" style="width:0%;background:linear-gradient(90deg,#ef4444,#f87171);"></div>
+          </div>
+        </div>
+
+        <div class="compliance-item" style="margin-bottom:0;">
+          <div class="compliance-header">
+            <span class="compliance-key">SC &nbsp;·&nbsp; SCALABILITY</span>
+            <span class="compliance-pct" id="kpi-SC">--</span>
+          </div>
+          <div class="compliance-track">
+            <div class="compliance-fill" id="bar-SC" style="width:0%;background:linear-gradient(90deg,#6366f1,#818cf8);"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- AI REASONING TIMELINE -->
+    <div class="panel">
+      <div class="panel-title">AI Threat Reasoning Timeline &nbsp;·&nbsp; LLM Explanations</div>
+      <div class="ai-reason-scroll" id="aiReasonScroll">
+        <div class="ai-entry">
+          <span class="ai-time">INIT</span>
+          <span class="ai-text">System initialized. Awaiting first threat signal from detection pipeline…</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       SECTION — LIVE THREAT FEED
+  ============================================================ -->
+  <div class="section-label">Real-Time Threat Feed &nbsp;·&nbsp; Auto-Trim at 300 Events</div>
+
+  <div class="panel">
+    <div class="panel-title">Live Attack Log &nbsp;·&nbsp; Streaming Events</div>
+    <div class="feed-scroll">
+      <table class="feed-table">
+        <thead>
+          <tr>
+            <th>TIME</th>
+            <th>ATTACK TYPE</th>
+            <th>SOURCE IP</th>
+            <th>SEVERITY</th>
+            <th>CONFIDENCE</th>
+            <th>AI SIGNAL</th>
+          </tr>
+        </thead>
+        <tbody id="feedBody">
+          <tr>
+            <td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:0.1em;font-size:10px;">
+              &#9711; Monitoring active &mdash; awaiting threat events&hellip;
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:20px;text-align:center;font-family:var(--font-mono);font-size:9px;color:var(--text-dim);letter-spacing:0.15em;">
+    THRIDSS AUTONOMOUS SECURITY GRID &nbsp;&middot;&nbsp; FINTECH THREAT SHIELD &nbsp;&middot;&nbsp; ALL SYSTEMS OPERATIONAL &nbsp;&middot;&nbsp; CLASSIFIED
+  </div>
+
+</div><!-- /#app -->
+
+
+<script>
+/* ============================================================
+   STATE ENGINE
+============================================================ */
+let riskIndex      = 15;
+let totalAttacks   = 0;
+let attackerMap    = {};
+let clusterMap     = {};
+let severityCounts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+let ws             = null;
+let wsReconnTimer  = null;
+
+// THRIDSS Governance KPI scores (realistic baselines)
+const kpiScores = {
+  T:  88,   // Transparency
+  H:  92,   // Human Control
+  R:  79,   // Robustness
+  I:  74,   // Interpretability
+  D:  95,   // Data Privacy
+  S:  83,   // Security
+  SC: 91    // Scalability
+};
+
+/* ============================================================
+   REAL-TIME CLOCK
+============================================================ */
+function updateClock() {
+  const now  = new Date();
+  document.getElementById('sysTime').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+  document.getElementById('sysDate').textContent  = now.toLocaleDateString('en-US', {
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+  });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ============================================================
+   CHART REFERENCES
+============================================================ */
+let trendChart, severityChart, clusterChart, confidenceGauge;
+
+/* ============================================================
+   CHART INITIALIZATION
+============================================================ */
+function initCharts() {
+  const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 350 },
+    plugins: { legend: { display: false } }
+  };
+
+  const axisStyle = {
+    ticks: { color: '#4a6280', font: { family: "'Share Tech Mono'", size: 9 } },
+    grid:  { color: 'rgba(26,45,74,0.45)' }
+  };
+
+  /* -- Trend Timeline -- */
+  trendChart = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'All Events',
+          data: [],
+          borderColor: '#0ea5e9',
+          backgroundColor: 'rgba(14,165,233,0.07)',
+          fill: true,
+          tension: 0.45,
+          pointRadius: 3,
+          pointBackgroundColor: '#0ea5e9',
+          borderWidth: 2
+        },
+        {
+          label: 'Critical',
+          data: [],
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,0.05)',
+          fill: true,
+          tension: 0.45,
+          pointRadius: 2,
+          borderWidth: 1.5
         }
-
-        const addWebsiteModal = document.getElementById('add-website-modal');
-        function showAddWebsiteModal() { if (addWebsiteModal) { addWebsiteModal.classList.remove('hidden'); setTimeout(() => addWebsiteModal.classList.remove('opacity-0'), 10); } }
-        function hideAddWebsiteModal() { if (addWebsiteModal) { addWebsiteModal.classList.add('opacity-0'); setTimeout(() => addWebsiteModal.classList.add('hidden'), 200); } }
-        async function handleAddWebsite(event) { event.preventDefault(); const form = event.target; const urlInput = document.getElementById('website-url'); const url = urlInput.value.trim(); if (!url) return showNotification('URL cannot be empty.', 'error'); let finalUrl = url; const isLocal = url.startsWith('localhost') || url.startsWith('127.0.0.1') || url.includes(':'); if (!url.startsWith('http://') && !url.startsWith('https://') && !isLocal) { finalUrl = 'https://' + url; } else if (!url.startsWith('http://') && !url.startsWith('https://') && isLocal) { finalUrl = 'http://' + url; } const payload = { url: finalUrl, check_interval: parseInt(document.getElementById('check-interval').value) || 300, check_ssl: document.getElementById('check-ssl').checked, check_content: document.getElementById('check-content').checked, check_security_headers: document.getElementById('check-security-headers').checked, check_performance: document.getElementById('check-performance').checked, }; const submitButton = form.querySelector('button[type="submit"]'); submitButton.disabled = true; submitButton.textContent = 'Adding...'; try { const response = await fetch("/monitor/website", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorData = await response.json().catch(() => ({ detail: 'Server error.' })); throw new Error(errorData.detail || `HTTP ${response.status}`); } const result = await response.json(); hideAddWebsiteModal(); form.reset(); showNotification(`Added '${result.url}'`, 'success'); } catch (error) { showNotification(`Error: ${error.message}`, 'error'); } finally { submitButton.disabled = false; submitButton.textContent = 'Add'; } }
-        async function removeWebsite(url) { if (!confirm(`Stop monitoring ${url}?`)) return; const cardId = `website-card-${btoa(url)}`; const cardElement = document.getElementById(cardId); if (cardElement) cardElement.style.opacity = '0.5'; try { const response = await fetch(`/monitor/website/${encodeURIComponent(url)}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json().catch(() => ({ detail: 'Server error.' })); throw new Error(errorData.detail || `HTTP ${response.status}`); } const result = await response.json(); cardElement?.remove(); showNotification(`Stopped monitoring '${result.url}'.`, 'success'); const container = document.getElementById('websites-container'); if (container && !container.querySelector('.website-card')) { container.innerHTML = `<div class="text-center py-5 text-xs text-gray-400 website-placeholder">No websites monitored.</div>`; } } catch (error) { showNotification(`Error: ${error.message}`, 'error'); if (cardElement) cardElement.style.opacity = '1'; } }
-        async function handleRunSimulation() { const btn = document.getElementById('run-simulation-btn'); if (!btn || btn.disabled) return; if (!confirm("Run attack simulation?")) return; const originalContent = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin mr-1" fill="none" viewBox="0 0 24 24"><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Running...`; try { const response = await fetch("/run_simulation", { method: 'POST' }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || `Failed to start (Status: ${response.status})`); showNotification(data.message || 'Simulation started!', 'info'); btn.dataset.restoreTimeout = setTimeout(() => { if (btn.disabled) { btn.disabled = false; btn.innerHTML = originalContent; showNotification('Sim status update timeout.', 'warning'); } }, 45000); } catch (error) { showNotification(`Error: ${error.message}`, 'error'); btn.disabled = false; btn.innerHTML = originalContent; } }
-        function handleSimulationStatusUpdate(data) { const btn = document.getElementById('run-simulation-btn'); const originalContent = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg><span class="font-medium">Simulate Attacks</span>`; if (btn && btn.dataset.restoreTimeout) { clearTimeout(parseInt(btn.dataset.restoreTimeout)); delete btn.dataset.restoreTimeout; } showNotification(data.message, data.status === 'completed' ? 'success' : (data.status === 'failed' || data.status === 'error' ? 'error' : 'info')); if (btn) { btn.disabled = false; btn.innerHTML = originalContent; } }
-        function showNotification(message, type = 'info') { const container = document.getElementById('notification-container'); if (!container) return; const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600', warning: 'bg-orange-500' }; const notification = document.createElement('div'); notification.className = `w-full max-w-xs p-3 rounded-md shadow-lg text-white text-sm font-medium ${colors[type] || colors.info} fade-in flex justify-between items-center mb-2`; const messageSpan = document.createElement('span'); messageSpan.className = 'flex-1 mr-2'; messageSpan.textContent = message; const closeButton = document.createElement('button'); closeButton.innerHTML = '&times;'; closeButton.className = 'text-xl font-bold leading-none flex-shrink-0 opacity-70 hover:opacity-100 focus:outline-none'; closeButton.onclick = () => notification.remove(); notification.appendChild(messageSpan); notification.appendChild(closeButton); container.prepend(notification); setTimeout(() => notification.remove(), 6000); }
-
-        // --- DATA LOADING FUNCTIONS ---
-        async function loadAttackLog() {
-            const tableBody = document.getElementById("attackLogBody");
-            if (!tableBody) return;
-            try {
-                const response = await fetch("/api/v1/attack-logs"); // <-- UPDATED to match app/main.py
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const logData = await response.json();
-                if (!Array.isArray(logData)) throw new Error("Invalid log format");
-                populateLogTable(logData); // This function now uses addAttackToLog
-            } catch (error) {
-                console.error('Error loading attack log:', error);
-                if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500 text-sm">Error loading log: ${error.message}</td></tr>`;
-                updateChartsFromLogData([]);
-            }
+      ]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        x: { ...axisStyle, ticks: { ...axisStyle.ticks, maxTicksLimit: 8 } },
+        y: { ...axisStyle, beginAtZero: true }
+      },
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: '#4a6280', font: { family: "'Share Tech Mono'", size: 9 }, boxWidth: 10 }
         }
+      }
+    }
+  });
 
-        function populateLogTable(logData = []) {
-            const tableBody = document.getElementById("attackLogBody");
-            if (!tableBody) return;
-            tableBody.innerHTML = ''; // Clear
-            if (logData.length === 0) { tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400 text-sm">No security events recorded.</td></tr>`; updateChartsFromLogData([]); return; }
-            const recentLogs = logData.slice(-MAX_LOG_ROWS);
-            recentLogs.reverse().forEach(attack => addAttackToLog(attack, true)); // addAttackToLog is now defined
-            updateChartsFromLogData(logData);
-        }
+  /* -- Severity Doughnut -- */
+  severityChart = new Chart(document.getElementById('severityChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['CRITICAL','HIGH','MEDIUM','LOW'],
+      datasets: [{
+        data: [0,0,0,0],
+        backgroundColor: ['#ef4444','#f97316','#eab308','#10b981'],
+        borderColor: '#070f1e',
+        borderWidth: 3
+      }]
+    },
+    options: { ...baseOpts, cutout: '68%' }
+  });
 
-        async function loadWebsiteStatus() {
-            const container = document.getElementById('websites-container');
-            if (!container) return;
-            try {
-                const response = await fetch("/monitor/websites");
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                if (!data || !Array.isArray(data.websites)) throw new Error("Invalid website data format");
-                updateWebsiteMonitoringUI(data.websites);
-            } catch (error) {
-                console.error('Error loading website status:', error);
-section                if (container) container.innerHTML = `<div class="text-center py-5 text-xs text-red-500">Error loading websites: ${error.message}</div>`;
-            }
-        }
+  /* -- Attack Cluster Bar -- */
+  clusterChart = new Chart(document.getElementById('clusterChart'), {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Frequency',
+        data: [],
+        backgroundColor: 'rgba(99,102,241,0.55)',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+        borderRadius: 3
+      }]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        x: { ...axisStyle },
+        y: { ...axisStyle, beginAtZero: true }
+      }
+    }
+  });
 
+  /* -- Confidence Semi-Doughnut -- */
+  confidenceGauge = new Chart(document.getElementById('confidenceGauge'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Confidence','Remaining'],
+      datasets: [{
+        data: [50,50],
+        backgroundColor: ['#38bdf8','#0a1628'],
+        borderColor:      ['#0ea5e9','#0a1628'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      ...baseOpts,
+      rotation: -90,
+      circumference: 180,
+      plugins: { legend: { display: false } }
+    }
+  });
+}
 
-        // --- WEBSOCKET CONNECTION ---
-        function connectWebSocket() {
-            const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-            const wsUrl = `${wsProtocol}${window.location.host}/ws`;
-            console.log(`[WS] Connecting to ${wsUrl}`);
-            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) { ws.close(); }
-            ws = new WebSocket(wsUrl);
+/* ============================================================
+   RISK ENGINE — scoring & visual update
+============================================================ */
+function applyRiskIncrement(severity) {
+  const inc = { CRITICAL: 6, HIGH: 4, MEDIUM: 2, LOW: 1 };
+  riskIndex  = Math.min(100, riskIndex + (inc[severity] || 1));
+  renderRisk();
+}
 
-            ws.onopen = () => { console.log("[WS] Connected"); showNotification('Real-time connection active.', 'success'); updateConnectionStatusIndicator(true); };
-            ws.onclose = (event) => { console.error(`[WS] Disconnected - Code: ${event.code}`); showNotification('Connection lost. Retrying...', 'warning'); updateConnectionStatusIndicator(false); setTimeout(connectWebSocket, wsRetryInterval + Math.random() * 1000); };
-            ws.onerror = (err) => { console.error('[WS] Error:', err); /* onclose handles reconnect */ };
+function renderRisk() {
+  const circumference = 314;
+  const offset        = circumference - (circumference * (riskIndex / 100));
 
-            // --- Updated WS OnMessage with Logging ---
-            ws.onmessage = (event) => {
-                console.log("[WS] Message received (raw):", event.data); // Log raw data
-                try {
-                    const data = JSON.parse(event.data);
-                    console.log("[WS] Parsed data:", data); // Log parsed data
+  document.getElementById('riskArc').setAttribute('stroke-dashoffset', offset.toFixed(2));
+  document.getElementById('riskValue').textContent = Math.round(riskIndex);
 
-                    switch (data.type) {
-    s                    case "metrics_update":
-                    console.log("[WS] Processing metrics_update");
-                    updateMetrics(data);
-                    break;
-                        case "website_update":
-                    console.log("[WS] Processing website_update for:", data.website?.url);
-                    if (data.website) updateSingleWebsiteCard(data.website);
-                    else console.warn("[WS] website_update message missing 'website' data.");
-                    break;
-                        case "attack_detected":
-                    console.log("[WS] Processing attack_detected:", data.attack_type);
-                    addAttackToLog(data); // Pass the whole data object
-                    break;
-                        case "simulation_status":
-                    console.log("[WS] Processing simulation_status:", data.status);
-                    handleSimulationStatusUpdate(data);
-                    break;
-                        default:
-                    if (typeof data === 'object' && data !== null && data.is_attack === true) { // Legacy support
-                        console.log("[WS] Processing legacy attack format:", data.attack_type);
-s                              addAttackToLog(data);
-                    } else {
-                        console.warn("[WS] Unknown message type or format received:", data);
-                        s
-                    }
-                }
-                } catch (e) {
-                console.error("[WS] Error parsing or handling message:", e);
-                console.error("[WS] Original message data:", event.data); // Log original data on error
-                Read
-            }
-        };
-        }
+  let color, tier, tierColor, labelText, tierClass, tierNum;
 
-        function updateConnectionStatusIndicator(isConnected) { const statusDiv = document.getElementById('connection-status'); if (!statusDiv) return; const indicator = statusDiv.querySelector('.status-indicator'); const text = statusDiv.querySelector('span'); statusDiv.className = 'flex items-center gap-1.5 backdrop-blur-sm px-2.5 py-1 rounded-full border text-xs'; indicator.className = 'status-indicator w-1.5 h-1.5 rounded-full'; text.className = 'font-medium'; if (isConnected) { statusDiv.classList.add('bg-green-500/10', 'border-green-500/30'); indicator.classList.add('bg-green-400'); indicator.classList.remove('disconnected'); text.classList.add('text-green-300'); text.textContent = 'Active'; } else { statusDiv.classList.add('bg-red-500/10', 'border-red-500/30'); indicator.classList.add('bg-red-400', 'disconnected'); text.classList.add('text-red-300'); text.textContent = 'Offline'; } }
+  if      (riskIndex <= 20) { color='#10b981'; tier='TIER 1'; tierColor='#10b981'; labelText='NOMINAL';        tierClass='';   tierNum=1; }
+  else if (riskIndex <= 40) { color='#06b6d4'; tier='TIER 2'; tierColor='#06b6d4'; labelText='ELEVATED';       tierClass='';   tierNum=2; }
+  else if (riskIndex <= 60) { color='#eab308'; tier='TIER 3'; tierColor='#eab308'; labelText='HIGH RISK';      tierClass='';   tierNum=3; }
+  else if (riskIndex <= 80) { color='#f97316'; tier='TIER 4'; tierColor='#f97316'; labelText='CRITICAL STATE'; tierClass='';   tierNum=4; }
+  else                      { color='#ef4444'; tier='TIER 5'; tierColor='#ef4444'; labelText='MAX THREAT';     tierClass='t5'; tierNum=5; }
 
-        // --- PAGE INITIALIZATION ---
-        document.addEventListener("DOMContentLoaded", () => {
-            console.log("Initializing Dashboard...");
-            initializeCharts();
+  document.getElementById('riskArc').setAttribute('stroke', color);
+  document.getElementById('riskValue').style.color       = color;
+  document.getElementById('riskLabel').textContent        = labelText;
+  const badge = document.getElementById('tierBadge');
+  badge.textContent  = tier;
+  badge.style.color  = tierColor;
+  badge.className    = 'tier-badge ' + tierClass;
 
-            // Setup listeners
-            document.getElementById('add-website-form')?.addEventListener('submit', handleAddWebsite);
-            document.getElementById('run-simulation-btn')?.addEventListener('click', handleRunSimulation);
+  // Update tier bars
+  for (let i = 1; i <= 5; i++) {
+    const bar = document.getElementById('tb' + i);
+    bar.classList.toggle('active', i <= tierNum);
+  }
+}
 
-            // Initial placeholders
-            const logTableBody = document.getElementById('attackLogBody');
-            const websiteContainer = document.getElementById('websites-container');
-            if (logTableBody) logTableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400 text-sm">Initializing...</td></tr>`;
-E           if (websiteContainer) websiteContainer.innerHTML = `<div class="text-center py-5 text-xs text-gray-400">Initializing...</div>`;
+/* ============================================================
+   RISK AUTO-DECAY (SOC realism — slow mitigation)
+============================================================ */
+setInterval(() => {
+  if (riskIndex > 15) {
+    riskIndex = Math.max(15, riskIndex - 1);
+    renderRisk();
+  }
+}, 5000);
 
-            // Fetch initial data after a short delay
-            setTimeout(() => {
-                // Ensure functions are defined before calling
-I               Promise.allSettled([loadAttackLog(), loadWebsiteStatus()])
-                    .then(() => console.log("Initial data fetch attempt complete."))
-                    .catch(err => console.error("Initial data load error:", err));
-                _
-            }, 50);
+/* ============================================================
+   COMPLIANCE KPI ENGINE
+============================================================ */
+function renderKPI() {
+  ['T','H','R','I','D','S','SC'].forEach(k => {
+    const pct = Math.round(kpiScores[k]);
+    document.getElementById('kpi-' + k).textContent  = pct + '%';
+    document.getElementById('bar-' + k).style.width  = pct + '%';
+  });
+}
 
-            connectWebSocket(); // Start WebSocket connection
+// Organic drift — slight realistic fluctuation
+function driftKPI() {
+  ['T','H','R','I','D','S','SC'].forEach(k => {
+    const delta   = (Math.random() - 0.42) * 1.8;
+    kpiScores[k]  = Math.min(100, Math.max(48, kpiScores[k] + delta));
+  });
+  renderKPI();
+}
+setInterval(driftKPI, 9000);
 
-            // Fade in main view
-            document.getElementById('dashboard-view')?.classList.add('fade-in');
-        });
+/* ============================================================
+   AI REASONING PANEL
+============================================================ */
+function appendAIReason(timeStr, reason, sev) {
+  const container = document.getElementById('aiReasonScroll');
+  const entry     = document.createElement('div');
+  entry.className = 'ai-entry';
 
-    </script>
+  const sevColors = { CRITICAL:'#f87171', HIGH:'#fb923c', MEDIUM:'#facc15', LOW:'#34d399' };
+  const sc        = sevColors[sev] || '#4a6280';
+
+  entry.innerHTML =
+    '<span class="ai-time">' + timeStr + '</span>' +
+    '<span style="color:' + sc + ';font-size:9px;margin-right:6px;">[' + sev + ']</span>' +
+    '<span class="ai-text">' + escapeHTML(reason) + '</span>';
+
+  container.insertBefore(entry, container.firstChild);
+  while (container.children.length > 80) container.removeChild(container.lastChild);
+}
+
+/* ============================================================
+   FEED TABLE ROW
+============================================================ */
+function appendFeedRow(data, timeStr, type, ip, sev, confPct) {
+  const tbody = document.getElementById('feedBody');
+
+  // Remove placeholder row
+  if (tbody.firstElementChild && tbody.firstElementChild.querySelector('[colspan]')) {
+    tbody.innerHTML = '';
+  }
+
+  const tr      = document.createElement('tr');
+  tr.className  = 'row-new';
+
+  const confColor = confPct >= 80 ? 'var(--accent-green)' : confPct >= 50 ? 'var(--accent-cyan)' : 'var(--accent-red)';
+  const signal    = escapeHTML((data.llm_reason || 'Anomaly pattern detected.').substring(0, 58)) + '&hellip;';
+
+  tr.innerHTML =
+    '<td style="color:var(--text-muted);white-space:nowrap;">'              + escapeHTML(timeStr) + '</td>' +
+    '<td style="color:var(--accent-blue);">'                                + escapeHTML(type)    + '</td>' +
+    '<td style="color:var(--text-primary);font-family:var(--font-mono);">'  + escapeHTML(ip)      + '</td>' +
+    '<td><span class="sev-badge sev-' + sev + '">' + sev + '</span></td>'                                   +
+    '<td style="color:' + confColor + ';">'         + confPct + '%</td>'                                    +
+    '<td style="color:#4a6280;font-size:10px;">'    + signal  + '</td>';
+
+  tbody.insertBefore(tr, tbody.firstChild);
+  while (tbody.children.length > 300) tbody.removeChild(tbody.lastChild);
+}
+
+/* ============================================================
+   ATTACK HANDLER — processes attack_detected messages
+============================================================ */
+function handleAttack(data) {
+  totalAttacks++;
+  document.getElementById('totalAttacks').textContent = totalAttacks.toLocaleString();
+
+  // Top attacker tracking
+  const ip                = data.ip || '0.0.0.0';
+  attackerMap[ip]         = (attackerMap[ip] || 0) + 1;
+  const topIP             = Object.keys(attackerMap).reduce((a, b) => attackerMap[a] > attackerMap[b] ? a : b);
+  document.getElementById('topAttackerIP').textContent    = topIP;
+  document.getElementById('topAttackerCount').textContent = attackerMap[topIP] + ' hits';
+
+  // Attack clustering bar chart
+  const type              = data.attack_type || 'UNKNOWN';
+  clusterMap[type]        = (clusterMap[type] || 0) + 1;
+  clusterChart.data.labels            = Object.keys(clusterMap);
+  clusterChart.data.datasets[0].data  = Object.values(clusterMap);
+  clusterChart.update('none');
+
+  // Severity doughnut
+  const sev = data.severity || 'LOW';
+  if (severityCounts[sev] !== undefined) severityCounts[sev]++;
+  severityChart.data.datasets[0].data = [
+    severityCounts.CRITICAL, severityCounts.HIGH, severityCounts.MEDIUM, severityCounts.LOW
+  ];
+  severityChart.update('none');
+  document.getElementById('sevCritical').textContent = severityCounts.CRITICAL;
+  document.getElementById('sevHigh').textContent     = severityCounts.HIGH;
+  document.getElementById('sevMedium').textContent   = severityCounts.MEDIUM;
+  document.getElementById('sevLow').textContent      = severityCounts.LOW;
+
+  // Trend timeline (rolling 30 points)
+  const label = new Date(data.timestamp || Date.now()).toLocaleTimeString('en-US', { hour12: false });
+
+  if (trendChart.data.labels.length >= 30) {
+    trendChart.data.labels.shift();
+    trendChart.data.datasets[0].data.shift();
+    trendChart.data.datasets[1].data.shift();
+  }
+  trendChart.data.labels.push(label);
+  trendChart.data.datasets[0].data.push(1);
+  trendChart.data.datasets[1].data.push(sev === 'CRITICAL' ? 1 : 0);
+  trendChart.update('none');
+
+  // Confidence gauge
+  const conf    = typeof data.confidence === 'number' ? data.confidence : 0.5;
+  const confPct = Math.round(conf * 100);
+  confidenceGauge.data.datasets[0].data = [confPct, 100 - confPct];
+
+  // Dynamic color based on certainty
+  let cfColor = '#38bdf8';
+  if      (confPct >= 85) cfColor = '#10b981';
+  else if (confPct >= 65) cfColor = '#0ea5e9';
+  else if (confPct >= 45) cfColor = '#eab308';
+  else                    cfColor = '#ef4444';
+
+  confidenceGauge.data.datasets[0].backgroundColor[0] = cfColor;
+  confidenceGauge.data.datasets[0].borderColor[0]     = cfColor;
+  confidenceGauge.update('none');
+  document.getElementById('confidencePct').textContent  = confPct + '%';
+  document.getElementById('confidencePct').style.color  = cfColor;
+  document.getElementById('confidenceFill').style.width = confPct + '%';
+  document.getElementById('confidenceFill').style.background = cfColor;
+
+  // AI reasoning
+  const reason = data.llm_reason || 'Hybrid LSTM-DRL model flagged anomalous pattern in transaction flow.';
+  appendAIReason(label, reason, sev);
+
+  // Feed table
+  appendFeedRow(data, label, type, ip, sev, confPct);
+
+  // Risk engine
+  applyRiskIncrement(sev);
+
+  // KPI impact on critical events
+  if (sev === 'CRITICAL') {
+    kpiScores.S  = Math.max(48, kpiScores.S  - 2.5);
+    kpiScores.R  = Math.max(48, kpiScores.R  - 1.5);
+    kpiScores.SC = Math.max(48, kpiScores.SC - 1.0);
+    renderKPI();
+  } else if (sev === 'HIGH') {
+    kpiScores.S  = Math.max(48, kpiScores.S  - 1.0);
+    renderKPI();
+  }
+}
+
+/* ============================================================
+   METRICS HANDLER — processes metrics_update messages
+============================================================ */
+function handleMetrics(data) {
+  document.getElementById('reqPerMin').textContent    = (data.requests_per_minute     || 0).toLocaleString();
+  document.getElementById('threatPerMin').textContent = (data.error_events_per_minute || 0).toLocaleString();
+  document.getElementById('wsClients').textContent    = (data.active_ws_clients       || 0);
+
+  const aiStatus = ((data.llm_status || 'UNKNOWN') + '').toUpperCase();
+  let aiColor    = '#94a3b8';
+  if      (aiStatus === 'ACTIVE')    aiColor = '#10b981';
+  else if (aiStatus === 'DEGRADED')  aiColor = '#eab308';
+  else if (aiStatus === 'OFFLINE')   aiColor = '#ef4444';
+
+  document.getElementById('aiStatusPanel').textContent  = aiStatus;
+  document.getElementById('aiStatusPanel').style.color  = aiColor;
+  document.getElementById('aiEngineHeader').textContent = aiStatus;
+  document.getElementById('aiEngineHeader').style.color = aiColor;
+}
+
+/* ============================================================
+   WEBSOCKET ENGINE — connect / auto-reconnect
+============================================================ */
+function connectWS() {
+  if (wsReconnTimer) { clearTimeout(wsReconnTimer); wsReconnTimer = null; }
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url   = proto + '//' + location.host + '/ws';
+
+  setBadge('connecting');
+
+  try {
+    ws = new WebSocket(url);
+  } catch (e) {
+    console.warn('[THRIDSS] WS construction failed:', e);
+    scheduleReconnect();
+    return;
+  }
+
+  ws.onopen = () => {
+    setBadge('connected');
+    appendAIReason(
+      new Date().toLocaleTimeString('en-US', { hour12: false }),
+      'WebSocket connection established. Autonomous defense grid online and monitoring.',
+      'LOW'
+    );
+  };
+
+  ws.onclose = () => {
+    setBadge('disconnected');
+    scheduleReconnect();
+  };
+
+  ws.onerror = (err) => {
+    console.warn('[THRIDSS] WS error:', err);
+    setBadge('disconnected');
+  };
+
+  ws.onmessage = (event) => {
+    let msg;
+    try     { msg = JSON.parse(event.data); }
+    catch (e) { console.warn('[THRIDSS] WS parse error:', e); return; }
+
+    if (msg.type === 'attack_detected') handleAttack(msg);
+    if (msg.type === 'metrics_update')  handleMetrics(msg);
+  };
+}
+
+function scheduleReconnect() {
+  if (wsReconnTimer) return;
+  wsReconnTimer = setTimeout(() => { wsReconnTimer = null; connectWS(); }, 4000);
+}
+
+function setBadge(state) {
+  const el = document.getElementById('connBadge');
+  if (state === 'connecting')   { el.textContent = '\u25CF CONNECTING';   el.className = 'connecting'; }
+  else if (state === 'connected') { el.textContent = '\u25CF CONNECTED';  el.className = 'connected'; }
+  else                           { el.textContent = '\u25CF RECONNECTING'; el.className = 'disconnected'; }
+}
+
+/* ============================================================
+   UTILITY — XSS-safe HTML escaping
+============================================================ */
+function escapeHTML(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ============================================================
+   BOOT SEQUENCE
+============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+  renderKPI();
+  renderRisk();
+  connectWS();
+});
+</script>
+
 </body>
-
 </html>
