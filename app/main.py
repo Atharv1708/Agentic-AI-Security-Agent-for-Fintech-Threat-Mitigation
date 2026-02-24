@@ -13,8 +13,9 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from .config import settings
 from .state import app_state
 from .api.endpoints import router as api_router
-from .services.monitoring import stop_all_monitoring
+from .api.websocket import router as websocket_router   # 🔥 ADD THIS
 from .api.websocket import broadcast_metrics_periodically
+from .services.monitoring import stop_all_monitoring
 
 # --------------------------------------------------
 # Logging Configuration
@@ -28,18 +29,13 @@ logging.basicConfig(
 logger = logging.getLogger("AI-Security-Agent")
 
 # --------------------------------------------------
-# Ollama Connectivity Check (Safe for Cloud)
+# Ollama Connectivity Check
 # --------------------------------------------------
 
-
 async def check_ollama_connection(client: httpx.AsyncClient, url: str):
-    """
-    Safe Ollama health check.
-    Will NOT crash app if Ollama is offline.
-    """
 
     if not url:
-        logger.warning("OLLAMA_URL not configured. Skipping check.")
+        logger.warning("OLLAMA_URL not configured.")
         return False
 
     health_url = url.split("/api/")[0] if "/api/" in url else url
@@ -53,7 +49,6 @@ async def check_ollama_connection(client: httpx.AsyncClient, url: str):
         response.raise_for_status()
         logger.info("Ollama connection successful.")
         return True
-
     except Exception as e:
         logger.warning(f"Ollama check failed (non-fatal): {e}")
         return False
@@ -63,13 +58,11 @@ async def check_ollama_connection(client: httpx.AsyncClient, url: str):
 # Lifespan (Startup & Shutdown)
 # --------------------------------------------------
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
     logger.info("Application starting up...")
 
-    # ---- Create shared HTTP client ----
     timeout = httpx.Timeout(15.0, connect=5.0)
     limits = httpx.Limits(max_keepalive_connections=20, max_connections=100)
 
@@ -81,13 +74,13 @@ async def lifespan(app: FastAPI):
 
     logger.info("Shared HTTP client initialized.")
 
-    # ---- Optional Ollama health check ----
+    # Optional Ollama check
     if os.environ.get("ENABLE_OLLAMA", "false").lower() == "true":
         await check_ollama_connection(app_state.http_client, settings.OLLAMA_URL)
     else:
         logger.info("Ollama check disabled.")
 
-    # ---- Start Metrics Broadcaster ----
+    # 🔥 Start WebSocket metrics broadcaster
     app.state.metrics_task = asyncio.create_task(
         broadcast_metrics_periodically(),
         name="metrics_broadcaster"
@@ -96,9 +89,9 @@ async def lifespan(app: FastAPI):
     logger.info("Metrics broadcasting started.")
     logger.info("Startup complete.")
 
-    yield  # Application runs here
+    yield
 
-    # ---- Shutdown Logic ----
+    # Shutdown
     logger.info("Shutting down application...")
 
     if hasattr(app.state, "metrics_task"):
@@ -129,13 +122,16 @@ app = FastAPI(
 )
 
 # --------------------------------------------------
-# API Routes
+# Include Routes
 # --------------------------------------------------
 
 app.include_router(api_router)
 
+# 🔥 THIS WAS MISSING
+app.include_router(websocket_router)
+
 # --------------------------------------------------
-# Static Files (Cloud-Safe Path)
+# Static Files
 # --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -163,7 +159,7 @@ async def serve_frontend():
 
 
 # --------------------------------------------------
-# Health Endpoint (Cloud Monitoring)
+# Health Endpoint
 # --------------------------------------------------
 
 @app.get("/health", tags=["Health"])
